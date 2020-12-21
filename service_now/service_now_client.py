@@ -1,27 +1,21 @@
 import copy
 import os
 import requests
+from typing import Any, Dict, Optional
 import json
 import urllib
 import uuid
 
 
 class ServiceNowClient(object):
-    # ServiceNowURL used to talk to the prod ServiceNow
-    #'https://watson.service-now.com/api/ibmwc/v1/change/'
-    # ServiceNowTestURL used to talk to the test servicenow instance
-    # "https://watsontest.service-now.com/api/ibmwc/change/"
-    ServiceNowURL = "https://watsontest.service-now.com/api/ibmwc/change/"
-
     CreateInfo = {
-        "assignedto": "mike.little@us.ibm.com",
-        "system": "kms",
+        "assignedto": "delma@example.com",
+        "system": "tef",
         "impact": "example impact description",
         "outageduration": "0 00:00:00",
         "priority": "moderate",
-        "environment": "ibm:ys1:",
-        "purpose": "Key Protect Automated CR creation",
-        "description": "Key Protect Automated CR creation",
+        "purpose": "Automated CR creation",
+        "description": "Automated CR creation",
         "plannedstart": "now",
         "plannedend": "now",
         "deploymentready": "yes",
@@ -36,42 +30,45 @@ class ServiceNowClient(object):
     }
 
     CreateTaskInfo = {
-        "shortdescription": "Key Protect task",
-        "system": "kms",
+        "shortdescription": "Task Info",
+        "system": "tef",
         "required": "not required", 
-        "description": "Key Protect task",
+        "description": "Task Info",
         "data": "data text",
         "targetscore": "100",
         "targettype": "greater than",
         "actualscore": "100"
     }
     
-
-    #def __init__(self):
-        #  commented out for testing with no service now connection
-        #self.token = os.getenv("SERVICE_NOW_TOKEN")
-        #if self.token is None:
-        #    raise Exception("CR failed: missing SERVICE_NOW_TOKEN")
+    def __init__(self) -> None:
+        # for testing, if the the env var SERVICE_NOW_TOKEN is NOT set, no api call will be made
+        self.token = os.getenv("SERVICE_NOW_TOKEN")
+        if self.token is None:
+            raise Exception("CR failed: missing SERVICE_NOW_TOKEN")
+        self.ServiceNowURL = os.getenv("Service_Now_URL", "")
+        if self.ServiceNowURL is "":
+            raise Exception("CR failed: missing Service_Now_URL")
         
-
     # Create a Change Request
-    def create_change_request(self, region):
-        self.CreateInfo["environment"] =  "ibm:ys1:{}".format(region)
-        #  commented out for testing with no service now connection
-        #resp = self.snow_api("", "post", "create", self.CreateInfo)
-        #change_request = resp.json().get("result", {}).get("number")
-        print(f"POST - CREATE - {self.CreateInfo}")
-        change_request = '88'
+    def create_change_request(self, region: str) -> str:
+        if self.snow_api is not None:
+            resp = self.snow_api("", "post", "create", self.CreateInfo)
+            change_request = resp.json().get("result", {}).get("number")
+        else:   # return default value for testing with no api
+            change_request = "88"
 
         return change_request
 
     # Get the created Change Request
-    def read_change_request(self, cr_id):
-        resp = self.snow_api(cr_id, 'get', "read", "")
+    def read_change_request(self, cr_id: str) -> str:
+        resp = self.snow_api(cr_id, 'get', "read", {})
 
         return resp.text
 
-    def snow_api(self, cr_id, method, action, payload):
+    def snow_api(self, cr_id: str, method: str, action: str, payload: Dict) -> Any:
+        if self.snow_api is None or self.ServiceNowURL is "":
+            return
+
         func = getattr(requests, method)
         if func is None:
             msg = "CR {} failed: invalid http method {}".format(action, method)
@@ -98,35 +95,36 @@ class ServiceNowClient(object):
         return resp
 
     # Update the created Change Request
-    def update_change_request(self, cr_id, data):
-        #  commented out for testing with no service now connection
-        #_ = self.snow_api(cr_id, "put", "update", data)
-        print(f"UPDATE - PUT - {cr_id} - {data}")
-        
+    def update_change_request(self, cr_id: str, data: Dict) -> None:
+        if self.snow_api is not None:
+            _ = self.snow_api(cr_id, "put", "update", data)
+
     # Close the Change Request
-    def close_change_request(self, cr_id, data = None):
+    def close_change_request(self, cr_id: str, data: Dict = None) -> int:
+        if self.snow_api is None:
+            return 502
+
         default = copy.deepcopy(self.CloseInfo)
         self._update_dict(data, default)
 
-        #  commented out for testing with no service now connection
-        #resp = self.snow_api(cr_id, "put", action='close', payload = default)
-        print(f"CLOSE - PUT - {cr_id} - {default}")
-        resp = f"CLOSE - PUT - {cr_id} - {default}"
-        return resp
+        resp = self.snow_api(cr_id, "put", "close", default)
 
-    def create_task(self, cr_id, data=None):
+        return resp.status_code
+
+    def create_task(self, cr_id: str, data: Dict = None) -> int:
+        if self.snow_api is None:
+            return 502
+
         default = copy.deepcopy(self.CreateTaskInfo)
         self._update_dict(data, default)
-        ret = self.snow_api(cr_id, "post", "task/create", default)
-        # self.slack.write("", attachments=[
-        #     {"text": "Created Task \n``` {} ```".format(default), 
-        #     "color": "good"
-        #     }])
-        return ret
+        resp = self.snow_api(cr_id, "post", "task/create", default)
 
-    def _update_dict(self, source, target):
-        if source is None:
+        return resp.status_code
+
+    def _update_dict(self, source: Optional[Dict[Any, Any]], target: Optional[Dict[Any, Any]]) -> None:
+        if source is None or target is None:
             return
+
         for k in target.keys():
             val = source.get(k, None)
             if val is not None:
