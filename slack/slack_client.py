@@ -4,65 +4,15 @@ import logging
 import os
 import time
 import traceback
+from typing import Any, Callable, Dict, List, Optional
 
 import requests
 
 LOG = logging.getLogger(__name__)
 
-def slack_notify(channel, hook):
-    def decorator_slack_notify(func):
-        @functools.wraps(func)
-        def wrapper_slack_hook(*args, **kwargs):
-            if kwargs.get("region"):
-                region = kwargs.get("region")
-            else:
-                region = args[0]
-
-            if kwargs.get("zone"):
-                zone = kwargs.get("zone")
-            else:
-                zone = args[1]
-
-            cli = SlackClient(defaults={"channel": channel, "hook": hook})
-            cli.post_webhook_message(
-                "",
-                attachments=[
-                    {"text": "Starting update on region={!r} zone={!r}".format(region, zone),
-                     "color": "good"}
-                ]
-            )
-
-            start_time = time.perf_counter()
-
-            try:
-                wrap_return = func(*args, **kwargs)
-            except Exception:
-                cli.post_webhook_message(
-                    "",
-                    attachments=[
-                        {"text": "Exception during update region={!r} zone={!r}\n```{}```".format(
-                            region, zone, traceback.format_exc()),
-                         "color": "danger"}
-                    ]
-                )
-                raise
-
-            run_time = time.perf_counter() - start_time
-            cli.post_webhook_message(
-                "",
-                attachments=[
-                    {"text": "Finished update on region={!r} zone={!r} in {:.4f} secs".format(region, zone, run_time),
-                     "color": "good"}
-                ]
-            )
-
-            return wrap_return
-        return wrapper_slack_hook
-    return decorator_slack_notify
-
 class SlackClient(object):
 
-    def __init__(self, token="", defaults=None):
+    def __init__(self, token: str = "", defaults: Dict = None) -> None:
         if defaults is None:
             defaults = {}
 
@@ -76,18 +26,18 @@ class SlackClient(object):
             self.set_defaults(defaults=defaults)
         self._check_slack_cfg()
 
-    def _check_slack_cfg(self):
+    def _check_slack_cfg(self) -> None:
         if self._Defaults['channel'] is None or self._Defaults['hook'] is None:
             raise ValueError((f"Invalid Slack configuration. "
                               f"Hook {self._Defaults['hook']} "
                               f"Channel {self._Defaults['channel']}"))
 
-    def write(self, *argv, **kwargs):
-        wf =self._Defaults.get("write_function", None)
+    def write(self, *argv: str, **kwargs: str) -> None:
+        wf: Any = self._Defaults.get("write_function", None)
         if wf:
-            return wf(*argv, **kwargs)
+            wf(*argv, **kwargs)
 
-    def _encode(self, msg):
+    def _encode(self, msg: str) -> str:
         """
         Encode Slack control characters as HTML entities.
         See: https://api.slack.com/docs/message-formatting#how_to_escape_characters
@@ -99,12 +49,12 @@ class SlackClient(object):
 
         return msg
 
-    def set_defaults(self, defaults={}):
+    def set_defaults(self, defaults: Dict = {}) -> None:
         for k, v in defaults.items():
             if k in self._Defaults:
                 self._Defaults[k] = v
 
-    def post_event_message(self, **kwargs):
+    def post_event_message(self, **kwargs: str) -> None:
         color = kwargs.get("color", "good")
         msg = kwargs.get("description", "")
         if msg:
@@ -114,12 +64,12 @@ class SlackClient(object):
                 }]
             )
 
-    def post_webhook_message(
-            self, body_text,
-            attachments=None, channel="", hook=""):
+    def post_webhook_message(self, body_text: str, attachments: Optional[List] = None,
+                             channel: str = "", hook: str = "") -> None:
 
         if attachments is None:
             attachments = []
+        # not sure why mypy does not like the following 2 lines, assigning str to str
         hook = hook if "" != hook else self._Defaults.get("hook", "")
         channel = channel if "" != channel else self._Defaults.get("channel", "")
         if not hook or not channel:
