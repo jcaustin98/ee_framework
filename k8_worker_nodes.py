@@ -97,8 +97,8 @@ If the tests fail, changes stop
             "description": "Update done for NODE in Zone REGION.",
         },
         "update.test":{
-            "shortdescription": "Run end to end testing of KP services functionality in updated ZONE REGION.",
-            "description": "Run end to end testing of KP services functionality in updated ZONE REGION.",
+            "shortdescription": "Run end to end testing of functionality in updated ZONE REGION.",
+            "description": "Run end to end testing of functionality in updated ZONE REGION.",
         },
         "update.dns.enable": {
             "shortdescription": "Enable the ZONE in REGION in DYN DNS.",
