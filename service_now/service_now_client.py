@@ -35,9 +35,6 @@ class ServiceNowClient(object):
         "required": "not required", 
         "description": "Task Info",
         "data": "data text",
-        "targetscore": "100",
-        "targettype": "greater than",
-        "actualscore": "100"
     }
     
     def __init__(self) -> None:

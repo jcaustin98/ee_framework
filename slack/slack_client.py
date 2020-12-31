@@ -12,7 +12,7 @@ LOG = logging.getLogger(__name__)
 
 class SlackClient(object):
 
-    def __init__(self, token: str = "", defaults: Dict = None) -> None:
+    def __init__(self, token: Optional[str] = "", defaults: Optional[Dict] = None) -> None:
         if defaults is None:
             defaults = {}
 
@@ -70,8 +70,8 @@ class SlackClient(object):
         if attachments is None:
             attachments = []
         # not sure why mypy does not like the following 2 lines, assigning str to str
-        hook = hook if "" != hook else self._Defaults.get("hook", "")
-        channel = channel if "" != channel else self._Defaults.get("channel", "")
+        hook = hook if "" != hook else str(self._Defaults.get("hook", ""))
+        channel = channel if "" != channel else str(self._Defaults.get("channel", ""))
         if not hook or not channel:
             return
 
@@ -84,7 +84,7 @@ class SlackClient(object):
             "text": self._encode(body_text),
         }
 
-        message_att = []
+        message_att: Any = []
         for a in attachments:
             if isinstance(a, str):
                 message_att.append(

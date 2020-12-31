@@ -1,7 +1,7 @@
 import datetime
 import os
 import pprint
-import unittest
+from typing import Any, Callable, Dict, List, Optional
 
 from events import events_name_space
 from service_now import service_now_client
@@ -10,7 +10,7 @@ from slack import slack_client
 # wrapper for summary slack client
 class SummarySlackClient(slack_client.SlackClient):
 
-    def __init__(self, token="", defaults=None):
+    def __init__(self,  token: Optional[str] = "", defaults: Optional[Dict] = None) -> None:
         defaults = {
             "channel": os.getenv("SLACK_SUMMARY_HOOK_CHANNEL"),
             "hook": os.getenv("SLACK_SUMMARY_HOOK_URL"),
@@ -18,7 +18,7 @@ class SummarySlackClient(slack_client.SlackClient):
         super(SummarySlackClient, self).__init__(token=token, defaults=defaults)
 
     # make yellow message bar for summary
-    def post_event_message(self, **kwargs):
+    def post_event_message(self, **kwargs: str):
         cur_color = kwargs.get("color", None)
         kwargs["color"] = "warning"
         super(SummarySlackClient, self).post_event_message(**kwargs)
@@ -56,21 +56,20 @@ Repeat all tasks for the second DC
 
 If the tests fail, changes stop
 ''',
-            "plannedstart": "now + 24 houts", # calculate
-            "plannedend": "now + 24 hours",# calculate
+            "plannedstart": "now",  # calculate
+            "plannedend": "now",    # calculate
             "deploymentready": "yes",
             "type": "standard",
             "backoutplan": "Updates will be stopped and fixes will be fast tracked to that DC. Then a deploy of those fixes will happen and the update will continue"
         }
+
     TaskBase = {
         "shortdescription": "",
         "required": "required", 
         "description": "", 
         "data": "DATA",
-        "targetscore": "100",
-        "targettype": "greater than",
-        "actualscore": "100"
     }
+
     TasksInfo = {
         "update.start": {
             "shortdescription": "Start k8 update in REGION ZONE at TIME",
@@ -110,7 +109,7 @@ If the tests fail, changes stop
         },
     }
 
-    def get_task_names(self):
+    def get_task_names(self) -> List[str]:
         return self.TasksInfo.keys()
 
     def register_events(self, event_obj, cb=None):

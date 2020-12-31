@@ -31,7 +31,10 @@ class SummarySlackClient(slack_client.SlackClient):
 
 class UpdateSNowClientTestCase(unittest.TestCase):
     def test_create_task(self):
-        snow_cli = UpdateK8WorkerNodes()
+        try:
+            snow_cli = UpdateK8WorkerNodes()
+        except:
+            pass  # No service now token defined
         task_names = snow_cli.get_task_names()
         events = events_name_space.EventNameSpace()
         # order of events IS important. The returns from the hook functions will

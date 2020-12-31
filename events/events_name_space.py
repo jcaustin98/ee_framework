@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 class EventNameSpace(object):
@@ -18,15 +18,7 @@ class EventNameSpace(object):
             handlers = hooks.get(event_name, None)
         handlers += [hook_fn]
 
-    def get_hook_fn(self, obj: Any) -> Callable[[Dict], Dict]:
-        try:
-            hook_fn = getattr(obj, 'write')
-        except AttributeError:
-            raise ValueError(f"ERROR Event object has no write method")
-
-        return hook_fn
-
-    def register(self, event_names: str, hook_fn: Callable[[Dict], Dict]) -> None:
+    def register(self, event_names: List, hook_fn: Callable[[Dict], Dict]) -> None:
         for event_name in event_names:
             if '*' in event_name:
                 self._set_handler(event_name, self.event_wild_hooks, hook_fn)
